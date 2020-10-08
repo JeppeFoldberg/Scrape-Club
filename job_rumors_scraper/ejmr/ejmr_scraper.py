@@ -145,13 +145,68 @@ def dump_thread_content(thread_url_dict, store_locally = 0): #1 for yes
 
 
 
-def page_df(page_responses_list):
+def page_df(page_responses_list, store_locally = 0): #1 for yes
     """
     Retrieves and if asked dumps full page content (thread_title, posts, views, votes etc) from ejmr page.
     Argument: Indivudual page url or list of page urls extracted with ejmr_page_urls, if the ouput should be stored locally.
     Returns: List with soup object. Each element is one page. If stored locally - dumps pickle file.
     """
-    pass
+    
+    # create list of soup objects
+
+    soup_list = [BeautifulSoup(url.text, 'html.parser') for url in page_responses_list]
+
+    title_list = [] # the title of the thread
+    post_count_list = [] # amount of posts in thread
+    views_list = [] # how many times the post has been viewed
+    votes_list = [] # the amount of positive/negative votes the thread has received
+
+    # loop over pages
+    for page in soup_list:
+        # find body content
+        page = page.find('table', {'id':'latest'})
+        #loop over threads
+        for thread in page.find_all('tr'):
+
+            # get posts count, views and votes
+            count_views_votes = thread.find_all('td', {'class':'num'})
+            if count_views_votes:
+                #post count
+                post_count = count_views_votes[0].text
+                post_count_list.append(post_count)
+                #views
+                views = count_views_votes[1].text
+                views_list.append(views)
+                #votes
+                votes = count_views_votes[2].text
+                votes_list.append(votes)
+
+        #TODO title names not always correct and matching with the rest
+
+
+            title = thread.find('a', href = True).text 
+            if title:
+                title_list.append(title)
+        title_list.pop(0) # first element is not
+                #
+            
+
+
+        
+
+    page_df = pd.DataFrame(list(zip(title_list, post_count_list, views_list, votes_list)), 
+                                            columns =['title', 'posts', 'views', 'votes'])
+
+    
+    
+    if store_locally == 1: 
+        # file name format
+        file_name = 'ejhr_posts_df' + str(datetime.date.today())
+        
+        page_df.to_csv(file_name)
+    
+    
+    return page_df
 
 
 def thread_df(thread_responses_list):
