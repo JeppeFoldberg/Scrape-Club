@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from tqdm import tqdm
 import re
+import pickle
 
 
 
@@ -11,7 +12,7 @@ import re
 
 def ejmr_page_urls(from_page, to_page, sub_forum = 'not_specified'):
     """
-    ejmr_page_urls is used to gather the URL's for threads on econjobrumors.com. 
+    ejmr_page_urls is used to gather the URL's for pages of threads on econjobrumors.com. 
     Arguments: From page (Page number to start gathering from), to page and optionally a sub-forum name.
     Returns: A list of URL's.
     """ 
@@ -30,19 +31,28 @@ def ejmr_page_urls(from_page, to_page, sub_forum = 'not_specified'):
 
         #the first page if not subforum has different formating
         if from_page <= 1:
-            url_list = [base_url] + [url + str(i + 1) for i in page_index] # base_url is page 1
-            url_list.pop()# remove last element, otherwise to_page + 1
+            page_urls = [base_url] + [url + str(i + 1) for i in page_index] # base_url is page 1
+            page_urls.pop()# remove last element, otherwise to_page + 1
         else:
-            url_list = [url + str(i) for i in page_index]
+            page_urls = [url + str(i) for i in page_index]
     
     else:
         sub_url = base_url + 'forum/' + sub_forum + '/page/' 
-        url_list = [sub_url + str(i) for i in page_index]
+        page_urls = [sub_url + str(i) for i in page_index]
     
-    return url_list
+    return page_urls
    
 
-def ejmr_content_urls(page_url_list):
+def ejmr_thread_urls(page_url_list):
+    """
+    ejmr_thread_urls is used to gather the URL's threads on econjobrumors.com. 
+    Argument: Indivudual page url or list of page urls extracted with ejmr_page_urls.
+    Returns: A list of thread URL's.
+    """ 
+    # if just one url, turn to list
+    if not isinstance(page_url_list, list):
+        page_url_list = [page_url_list]
+
     # loop over urls list of thread page responses
     responses_list = [requests.get(url) for url in page_url_list]
 
@@ -50,7 +60,7 @@ def ejmr_content_urls(page_url_list):
     soup_list = [BeautifulSoup(response.text, 'html.parser') for response in responses_list]
 
     # list to store thread content url
-    content_urls = []
+    thread_urls = []
 
     for page in soup_list:
         # find body content
@@ -65,9 +75,19 @@ def ejmr_content_urls(page_url_list):
             thread = re.findall(regex, str(thread))
             
             if thread:
-                content_urls.append(thread[0])
+                thread_urls.append(thread[0]) # extract first elemt. Second element is next page in same thread
 
-    return content_urls
+    return thread_urls
+
+def ejmr_page_content(page_url_list, store_locally = 0):#1 for yes
+    """
+    Extracts content (thread_title, posts, views, votes etc) from ejmr page.
+    Argument: Indivudual page url or list of page urls extracted with ejmr_page_urls, if the ouput should be stored locally.
+    Returns: List with html responses. Each element is one page. If stored locally - dumps pickle file.
+    """
+
+    pass
+
 
 
 
@@ -76,7 +96,6 @@ def ejmr_content_urls(page_url_list):
 
         
         
-
 
 
 
