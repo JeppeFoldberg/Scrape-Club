@@ -119,15 +119,29 @@ def dump_page_content(page_url_list, store_locally = 0): #1 for yes
 def dump_thread_content(thread_url_dict, store_locally = 0): #1 for yes
     """
     Retrieves and if asked dumps thread content from ejmr thread.
-    Argument: Indivudual thread url or list of thread urls extracted with ejmr_thread_urls, if the ouput should be stored locally.
+    Argument: Dict of thread urls extracted with thread_urls, if the ouput should be stored locally.
     Returns: List with soup object. Each element is one page. If stored locally - dumps pickle file.
     """
-    
-    soup_list = [BeautifulSoup(thread_url.text, 'html.parser') for thread in tqdm(thread_url_list)]
+    # get full list of urls (one for each page in each thread)
+    url_list = []
+    for url, count in tqdm(thread_url_dict.items()):
+        base_url = url + '/page/' # correct url format
+        url_list.append([base_url + str(i + 1) for i in range(count)])
 
-
-    
-    thread_list = []
+    # get html for each page och each thread
+    # loop over threads
+    for thread in url_list:
+        # loop over urls in thread
+        responses_list = [requests.get(url) for url in tqdm(thread)]
+       
+    if store_locally == 1: 
+        # file name format
+        file_name = 'ejhr_' + str(len(thread_url_dict)) + '_threads_' + str(datetime.date.today())
+        
+        with open(file_name, 'wb') as fp:
+                pickle.dump(responses_list, fp)
+        
+    return responses_list
 
 
 
