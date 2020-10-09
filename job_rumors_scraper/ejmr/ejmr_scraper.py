@@ -124,15 +124,23 @@ def dump_thread_content(thread_url_dict, store_locally = 0): #1 for yes
     """
     # get full list of urls (one for each page in each thread)
     url_list = []
-    for url, count in tqdm(thread_url_dict.items()):
+    responses_list = [] # store responses
+
+    for url, count in thread_url_dict.items():
         base_url = url + '/page/' # correct url format
         url_list.append([base_url + str(i + 1) for i in range(count)])
 
     # get html for each page och each thread
     # loop over threads
-    for thread in url_list:
-        # loop over urls in thread
-        responses_list = [requests.get(url) for url in tqdm(thread)]
+    for thread in tqdm(url_list):
+        try:
+            # loop over urls in thread
+            response = [requests.get(url) for url in thread]
+            responses_list.append(response)
+            
+        except:
+
+            continue
        
     if store_locally == 1: 
         # file name format
@@ -147,9 +155,9 @@ def dump_thread_content(thread_url_dict, store_locally = 0): #1 for yes
 
 def page_df(page_responses_list, store_locally = 0): #1 for yes
     """
-    Retrieves and if asked dumps full page content (thread_title, posts, views, votes etc) from ejmr page.
-    Argument: Indivudual page url or list of page urls extracted with ejmr_page_urls, if the ouput should be stored locally.
-    Returns: List with soup object. Each element is one page. If stored locally - dumps pickle file.
+    Creates Pandas df of ejmr page content.
+    Argument: list of html objects parsed with dump page content, 1 if the ouput should be stored locally.
+    Returns: Pandas DataFrame and if asked a csv locally.
     """
     
     # create list of soup objects
@@ -229,25 +237,66 @@ def page_df(page_responses_list, store_locally = 0): #1 for yes
     if store_locally == 1: 
         # file name format
         file_name = 'ejhr_posts_df' + str(datetime.date.today())
-        
+        # store csv locally   
         page_df.to_csv(file_name)
     
     
     return page_df
 
 
-def thread_df(thread_responses_list):
+def thread_df(thread_responses_list, store_locally = 0):
     """
-    Retrieves and if asked dumps full page content (thread_title, posts, views, votes etc) from ejmr page.
-    Argument: Indivudual page url or list of page urls extracted with ejmr_page_urls, if the ouput should be stored locally.
+    Creates Pandas df with thread content.
+    Argument: list of thread html objects retrieved with dump_thread_content.
     Returns: List with soup object. Each element is one page. If stored locally - dumps pickle file.
     """
-    pass
+    
+
+    post_author = []
+    post_text = []
+    post_likes = []
+    post_dislikes = []
+    post_position = [] # the position in the thread
+    thread_name = []
+
+    soup_list = []
+    for thread in tqdm(thread_responses_list):
+        
+        soup = [BeautifulSoup(page.text, 'html.parser') for page in thread]
+        soup_list.append(soup)
+        
+    for thread in tqdm(soup_list):
+        
+        
+        for page in thread:
+            
+            
+            # get author
+            authors = page.find_all('div', {'class':'threadauthor'})  
+            [post_author.append(author.text) for author in authors]
+                    
+            # get text
+            posts = page.find_all('div', {'class':'post'})
+            [post_text.append(post.text) for post in posts]
+
+            # get post position
+            [post_position.append(position + 1) for position in range(len(authors))]
+            
+            # get title
+            titles = page.find('h2', {'class':'topictitle'}).text
+            for i in range(len(authors)):
+                thread_name.append(titles)
 
 
 
+    # create df
+    thread_df = pd.DataFrame(list(zip(post_author, thread_name, 
+                                      post_text, post_position)), 
+                                      columns =['author', 'tread_name', 
+                                                'post_text', 'position'])
 
 
+    return thread_df
 
     # list of returned thread urls
     
