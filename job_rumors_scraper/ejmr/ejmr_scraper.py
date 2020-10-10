@@ -252,48 +252,84 @@ def thread_df(thread_responses_list, store_locally = 0):
     """
     
 
-    post_author = []
-    post_text = []
-    post_likes = []
-    post_dislikes = []
-    post_position = [] # the position in the thread
-    thread_name = []
-
     soup_list = []
     for thread in tqdm(thread_responses_list):
         
         soup = [BeautifulSoup(page.text, 'html.parser') for page in thread]
         soup_list.append(soup)
-        
+    
+    post_author = [] # 4 random characters if anonymous else user name
+    post_author_rep = [] # NaN if anonymous else the reputation of author
+    post_text = [] # full text 
+    post_likes = [] # good
+    post_dislikes = [] # not good
+    post_position = [] # the position in the thread
+    post_age = []
+    thread_name = [] # the name of the thread
+
+    
+    # loop over each thread
     for thread in tqdm(soup_list):
         
-        
+        # loop over each page in a thread
         for page in thread:
             
             
-            # get author
-            authors = page.find_all('div', {'class':'threadauthor'})  
-            [post_author.append(author.text) for author in authors]
-                    
+            # get author and reputation if not anonymous
+            authors = page.find_all('div', {'class':'threadauthor'})
+            
+            # loop over authors
+            for author in authors:
+                # check if author is anonymous
+                if author.text.split('\n')[2] == 'Economist':
+                    post_author.append(author.text.split('\n')[3])
+                    post_author_rep.append(np.NaN)
+                # if registered user append user name and their reputation
+                else:
+                    post_author.append(author.text.split('\n')[2])
+                    post_author_rep.append(author.text.split('\n')[3])
+                 
             # get text
             posts = page.find_all('div', {'class':'post'})
             [post_text.append(post.text) for post in posts]
+            
+            #TODO Implement functionallity for dealing with when posts quote and references other posts
+            
+            # get likes, dislikes and how old the post is
+            likes_dislikes_age = page.find_all('div', {'class':'poststuff'})
+            
+            
+            # likes
+            [post_likes.append(int(re.findall('(?<=\>)(.*?)(?=\<)', str(like))[5])) for like in likes_dislikes_age]
+            
+            # dislikes
+            [post_dislikes.append(int(re.findall('(?<=\>)(.*?)(?=\<)', str(dislike))[9])) for dislike in likes_dislikes_age]
 
-            # get post position
-            [post_position.append(position + 1) for position in range(len(authors))]
+            # post age
+            [post_age.append(re.findall('(?<=\>)(.*?)(?=\<)', str(date))[0]) for date in likes_dislikes_age]
+
+
+            # get position            
+            [post_position.append(position + 1) for position in range(len(posts))]
             
             # get title
-            titles = page.find('h2', {'class':'topictitle'}).text
+            titles = page.find('h2', {'class':'topictitle'})
             for i in range(len(authors)):
-                thread_name.append(titles)
-
-
+                thread_name.append(titles.text)
+    
+            
+        
+    
 
     # create df
-    thread_df = pd.DataFrame(list(zip(post_author, thread_name, 
-                                      post_text, post_position)), 
-                                      columns =['author', 'tread_name', 
-                                                'post_text', 'position'])
+    thread_df = pd.DataFrame(list(zip(post_author, post_author_rep,
+                                      thread_name, post_text,
+                                      post_likes, post_dislikes,
+                                      post_age, post_position)), 
+                                      columns =['author', 'author_rep', 
+                                                'tread_name', 'post_text',
+                                                'post_likes', 'post_dislikes',
+                                                'post_age', 'position'])
 
 
     return thread_df
