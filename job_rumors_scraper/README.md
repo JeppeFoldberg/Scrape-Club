@@ -6,9 +6,9 @@ This is a container for scrapers of the following forums:
 2. https://www.poliscirumors.com/
 3. https://www.socjobrumors.com/
 
-## Goals
+## Objective
 
-The goal is for the scapers is to be able to produce two different data-frames, one in which each observation is a thread the forum (we call this page_df) and one where each observation is a post in a thread (we call this thread_df).
+The objective with the scapers is to be able to produce two different data-frames, one in which each observation is a thread the forum (we call this page_df) and one where each observation is a post in a thread (we call this thread_df).
 
 **page_df features**
 
